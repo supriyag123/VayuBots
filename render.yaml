@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: vayubots
+    env: python
+    region: sydney                # or oregon/sydney — pick closest to Perth
+    plan: starter                       # upgrade to 'starter' if you need background jobs
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn vayu.server.main:app --host 0.0.0.0 --port 10000
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AIRTABLE_API_KEY
+        sync: false
+      - key: AIRTABLE_BASE_ID
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_NUMBER
+        sync: false
+      - key: ENV
+        value: production
+
+    autoDeploy: true
