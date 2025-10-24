@@ -19,7 +19,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 from crewai import Agent
-from crewai.tools import tool
+from crewai_tools import tool
 from langchain_openai import ChatOpenAI
 import json
 
