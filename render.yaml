@@ -2,7 +2,7 @@ services:
   - type: web
     name: vayubots
     env: python
-    region: sydney                # or oregon/sydney — pick closest to Perth
+    region: Singapore              # or oregon/sydney — pick closest to Perth
     plan: starter                       # upgrade to 'starter' if you need background jobs
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn vayu.server.main:app --host 0.0.0.0 --port 10000
