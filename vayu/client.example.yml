@@ -1,0 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+For client level override
+"""
+
+clients:
+  - name: "Rangmanch"
+    preferred_channels: ["Facebook","Instagram"]
+    sources:
+      websites: ["https://rangmanch.example.com","https://theatrewa.com/?page=search&cid=6"]
+      fb_pages: ["RangmanchWA","PerthTheatre"]
+      hashtags: ["#PerthTheatre","#WAArts"]
+    approval_mode: "Manager"
