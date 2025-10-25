@@ -2,14 +2,16 @@ services:
   - type: web
     name: vayubots
     env: python
-    region: Singapore              # or oregon/sydney — pick closest to Perth
-    plan: starter                       # upgrade to 'starter' if you need background jobs
-    buildCommand: pip install -r requirements.prod.txt
+    region: singapore                  # ✅ lowercase
+    plan: starter                      # ✅ starter is fine unless you need >512MB RAM
+    buildCommand: pip install --no-cache-dir -r requirements.prod.txt
     startCommand: uvicorn vayu.server.main:app --host 0.0.0.0 --port 10000
 
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+
+      # --- 🔐 Sensitive keys managed in Render Dashboard ---
       - key: OPENAI_API_KEY
         sync: false
       - key: AIRTABLE_API_KEY
@@ -22,6 +24,8 @@ services:
         sync: false
       - key: TWILIO_WHATSAPP_NUMBER
         sync: false
+
+      # --- 🌎 Environment marker ---
       - key: ENV
         value: production
 
