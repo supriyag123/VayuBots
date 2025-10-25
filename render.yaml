@@ -4,7 +4,7 @@ services:
     env: python
     region: Singapore              # or oregon/sydney — pick closest to Perth
     plan: starter                       # upgrade to 'starter' if you need background jobs
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.prod.txt
     startCommand: uvicorn vayu.server.main:app --host 0.0.0.0 --port 10000
 
     envVars:
