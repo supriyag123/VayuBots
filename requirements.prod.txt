@@ -115,7 +115,7 @@ pybase64==1.4.2
 pycparser==2.23
 pydantic==2.12.2
 pydantic-settings==2.11.0
-pydantic_core==2.41.4playwright
+pydantic_core==2.41.4
 pyee==13.0.0
 Pygments==2.19.2
 PyJWT==2.10.1
