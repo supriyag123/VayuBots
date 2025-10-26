@@ -11,6 +11,7 @@ env/
 .venv/
 *.venv/
 .venv-prod/
+.venv-test/
 
 # === Python cache ===
 __pycache__/
