@@ -68,7 +68,8 @@ def submit_client_input(
         source_type="Client Input",
         image_url=image_url,
         source_detail=source_detail,
-        priority="High"
+        priority="High",
+        status = "New"
     )
     idea_id = idea["id"]
 

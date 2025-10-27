@@ -146,7 +146,7 @@ def get_client_config(client_id: str):
 # IDEAS MANAGEMENT
 # ============================================================================
 
-def create_idea(client_id, headline, summary, source_type="Client Input", image_url=None, source_detail=None, priority="Medium"):
+def create_idea(client_id, headline, summary, source_type="Client Input", image_url=None, source_detail=None, priority="Medium",status = "New"):
     """
     Create an idea record in Airtable. Supports optional image upload as attachment.
     """
@@ -156,6 +156,7 @@ def create_idea(client_id, headline, summary, source_type="Client Input", image_
         "Summary": summary,
         "Source Type": source_type,
         "Priority": priority,
+        "Status": status
     }
 
     if source_detail:

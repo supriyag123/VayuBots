@@ -51,11 +51,11 @@ class KarnaMarketingCrew:
     def run_idea_curation(self, client_id: str, num_ideas: int = 20):
         """Run idea curation for a single client."""
         print("\n" + "=" * 60)
-        print("Karna Idea Curation")
+        print("🧠 Karna Idea Curation")
         print("=" * 60)
         print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    
-        # Get client info
+
+        # ✅ Get client info
         try:
             client_config = get_client_config(client_id)
             client_name = client_config["name"]
@@ -65,34 +65,80 @@ class KarnaMarketingCrew:
         except Exception as e:
             print(f"❌ ERROR loading client: {e}")
             return None
-    
-        # Create task
+
+        # ✅ Fetch ideas from Airtable
+        try:
+            table = _tbl("Ideas")
+            all_ideas = table.all(max_records=200)
+
+            # Filter only this client's ideas
+            client_ideas = [
+                idea for idea in all_ideas
+                if client_id in idea["fields"].get("Client", [])
+            ]
+
+            # ✅ Only pick ideas that are NEW
+            new_ideas = [
+                idea for idea in client_ideas
+                if idea["fields"].get("Status") == "New"
+            ]
+
+            if not new_ideas:
+                print("⚠️ No new ideas found for curation.")
+                return None
+
+            curated_candidates = new_ideas[:num_ideas]
+            print(f"🧩 Total new ideas selected for curation: {len(curated_candidates)}")
+            for idea in curated_candidates:
+                headline = idea["fields"].get("Headline", "Untitled")
+                print(f"   - {headline[:60]}")
+
+        except Exception as e:
+            print(f"❌ Error fetching ideas: {e}")
+            return None
+
+        # ✅ Create the curation task
         curation_task = create_idea_curation_task(
             agent=self.idea_agent,
             client_id=client_id,
             client_name=client_name,
-            num_ideas=num_ideas,
+            num_ideas=len(curated_candidates)
         )
-    
-        # Create execution workflow
+
+        # ✅ Build the workflow
         workflow = Crew(
             agents=[self.idea_agent],
             tasks=[curation_task],
             process=Process.sequential,
-            verbose=self.verbose,
+            verbose=self.verbose
         )
-    
+
+        # ✅ Run the curation process
         try:
             result = workflow.kickoff()
             print("\n" + "=" * 60)
             print("✅ Curation Complete!")
             print("=" * 60 + "\n")
             print(result)
+
+            # ✅ Update curated ideas in Airtable
+            try:
+                for idea in curated_candidates:
+                    table.update(idea["id"], {
+                        "Status": "Curated",
+                        "Curation Date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                print(f"✅ Updated {len(curated_candidates)} ideas to Status = 'Curated'")
+            except Exception as e:
+                print(f"⚠️ Warning: could not update idea status: {e}")
+
             return result
+
         except Exception as e:
             print(f"\n❌ ERROR during curation: {e}")
+            import traceback
+            traceback.print_exc()
             return None
-    
 
 
     def run_post_creation(self, client_id, idea_ids=None, num_ideas=3):
@@ -131,10 +177,11 @@ class KarnaMarketingCrew:
             ]
             print(f"[DEBUG] Total ideas for client: {len(client_ideas)}")
     
-            # Filter for High priority, not Processed
+            # Filter for High priority, Curated
             ideas = [
                 idea for idea in client_ideas
                 if idea['fields'].get('Priority') == 'High'
+                and idea['fields'].get('Status') == 'Curated'
                 and idea['fields'].get('Status') != 'Processed'
             ]
     
@@ -147,6 +194,7 @@ class KarnaMarketingCrew:
                 ideas = [
                     idea for idea in client_ideas
                     if idea['fields'].get('Priority') == 'Medium'
+                    and idea['fields'].get('Status') == 'Curated'
                     and idea['fields'].get('Status') != 'Processed'
                 ]
                 ideas.sort(key=lambda x: x['fields'].get('Quality Score', 0), reverse=True)
