@@ -252,7 +252,7 @@ def create_post(client_id, idea_id, channel, caption, hashtags, cta,
         "Caption": caption,
         "Hashtags": hashtags,
         "CTA": cta,
-        "Impact Score": round(impact_score, 4),
+        "Impact Score": round(float(impact_score), 4),
         "Source Type": source_type,
         "Publish Status": "Draft"
     }
@@ -272,7 +272,7 @@ def create_post(client_id, idea_id, channel, caption, hashtags, cta,
         print(f"[DEBUG create_post] Added to fields dict")
     else:
         print(f"[DEBUG create_post] No image_url provided (is None or empty)")
-        fields["image_url"] = " "
+        #fields.pop("image_url", None)
         
     if link_url:
         print(f"[DEBUG create_post] Adding link_url: {link_url}")

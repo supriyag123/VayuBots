@@ -235,6 +235,52 @@ class KarnaMarketingCrew:
             print(f"{'='*60}\n")
             print(result)
             return result
+        
+            
+            # ✅ Guarantee Airtable persistence (safe even if agent already saved)
+            try:
+                posts_data = result.get("posts", [])
+                if not posts_data:
+                    print("⚠️ No posts returned by crew, skipping save.")
+                else:
+                    table_posts = _tbl("Posts")
+                    table_ideas = _tbl("Ideas")
+        
+                    print(f"💾 Ensuring {len(posts_data)} posts are in Airtable...")
+                    for post in posts_data:
+                        idea_id = post.get("idea_id")
+                        client_id = post.get("client_id")
+                        
+                        # 👇 Fetch client approval mode dynamically
+                        client_config = get_client_config(client_id)
+                        approval_mode = client_config.get("approval_mode", "Manager")
+                        approval_status = "Auto-Approved" if approval_mode == "Auto" else "Needs Approval"
+        
+                        # skip if already saved
+                        existing = table_posts.all(formula=f"{{Idea}} = '{idea_id}'")
+                        if existing:
+                            print(f"⚠️ Post already exists for idea {idea_id}, skipping.")
+                            continue
+        
+                        fields = {
+                            "Client": [client_id],
+                            "Idea": [idea_id],
+                            "Caption": post.get("caption"),
+                            "Hashtags": post.get("hashtags"),
+                            "CTA": post.get("cta"),
+                            "Quality Score": post.get("quality_score"),
+                            "Publish Status": "Draft",
+                            "Approval Status": approval_status
+                        }
+                        table_posts.create(fields)
+                        table_ideas.update(idea_id, {"Status": "Processed"})
+                    print("✅ Airtable sync complete.")
+            except Exception as e:
+                print(f"❌ Error saving posts to Airtable: {e}")
+        
+            return result
+                
+        
     
         except Exception as e:
             print(f"\n❌ Error during post creation: {e}")

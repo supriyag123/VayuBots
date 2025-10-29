@@ -117,8 +117,8 @@ def create_post_creation_task(agent, client_id: str, idea_ids: list):
       - Tool will try to scrape from source first
       - If no image found, will generate with DALL-E based on brand context
       - Save the returned image_url to use in posts
-   
-   c. Create 3 post variants with different angles:
+      
+   c. STEP C: Use 'create_post_variants' tool to create 3 variants of the post with different angles:
       - Variant 1: Emotional/storytelling approach
       - Variant 2: Informational/educational approach
       - Variant 3: Urgency/FOMO approach

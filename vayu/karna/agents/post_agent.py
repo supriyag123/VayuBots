@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-agents/marketing/agents/post_agent.py
-
 Post Creation Agent - Creates engaging social media posts from curated ideas
 """
 
@@ -90,6 +88,93 @@ def get_brand_guidelines(client_id: str) -> str:
         
     except Exception as e:
         return json.dumps({"error": str(e)})
+
+
+@tool("Create Post Variants")
+def create_post_variants(idea_summary: str, brand_voice: str, instructions: str = "") -> str:
+    """
+    Generate multiple social media post variants from an idea summary and brand details (tone_style, industry, and instructions).
+
+    Args:
+        idea_summary: The summary or key message of the idea
+        brand_voice: Brand voice to evaluate against
+        instructions: Additional client instructions
+
+
+    Returns:
+        JSON list of variant captions
+    """
+
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.9)
+
+        prompt = f"""
+        You are a social media copywriter writing for a brand as indicated in {brand_voice}.
+
+        **brand_voice:** {brand_voice}
+        **Creative Instructions:** {instructions}
+
+        IDEA SUMMARY:
+        {idea_summary}
+        
+        
+        ### Writing Principles (must follow):
+            - **Hook**: Start with emotion, question, or bold statement
+            - **Story**: Connect people to the experience or value
+            - **Urgency**: Create FOMO when appropriate
+            - **Authenticity**: Match the brand voice, never generic
+            - **Adaptation**: Adjust tone and style based on client instructions
+
+
+
+        ✍️ Write 3 distinct, high-quality social media post variants 
+        that follow these principles:
+            - Start with a bold emoji + bold hook line (e.g., "❓ **Ready for…**")
+            - Then a story paragraph
+            - Then urgency (if relevant)
+            - If link_url provided, include a clear **CTA** like:  
+                  "🎟️ Get your tickets now: <link>"
+            - End with hashtags 
+            - Separate sections with blank lines (`\\n\\n`)
+            - Do NOT output "Hook:", "Story:", etc. labels
+            - Use client brand voice
+            - Image: From source or AI-generated
+            - Post length: 100–150 words (not just 1–2 lines)
+            - Format: Use short paragraphs (1–2 sentences each), separated by line breaks
+            - Tone: Conversational, warm, and audience-focused
+            
+        Return ONLY valid JSON in this exact format:
+        {{
+        "idea_id": "IdeaID",
+        "caption": "text for variant 1",
+        "hashtags": "#tag1 #tag2",
+        "cta": "🎟️ Learn more: <source_url>",
+        "client_id": "recnfq86W5hV816Tv"
+        }}"""
+                
+
+ 
+        
+        response = llm.invoke(prompt)
+        content = response.content.strip()
+                
+        # Clean markdown if present
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+                
+        # Validate it's JSON
+        parsed = json.loads(content)
+                
+        return json.dumps(parsed, indent=2)
+                
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
 
 
 @tool("Evaluate Post Variant")
@@ -318,7 +403,8 @@ def create_social_post(
 
         # Combined impact score
         impact_score = (quality_score / 10 * 0.6) + (similarity_score * 0.4)
-
+        
+        print("Actually creating post - from inside Post Agent Create Post Tool")
         # Actually create the post in Airtable
         post = create_post(
             client_id=client_id,
@@ -593,11 +679,17 @@ def create_post_agent():
         backstory="""You are a skilled social media copywriter who knows how to turn raw ideas into posts that grab attention and drive engagement. You never write dull or generic captions.
 
 **Your approach:**
-You combine creative writing skills with data-driven decision making. For every post, you:
-1. Create multiple variants exploring different angles
-2. Evaluate each variant's writing quality
-3. Compare each variant to historical top-performing content
-4. Choose the variant with the best combined score
+You combine creative writing skills with data-driven decision making. For every post, you MUST follow this:
+
+1. Call "Get Idea Details" to understand the idea.
+2. Call "Get Brand Guidelines" to understand tone, instructions, and channels.
+3. Call "create_post_variants" to generate multiple caption options, for each idea
+4. For EACH variant:
+   - Call "Evaluate Post Variant" to get quality_score.
+   - Call "Compare Post to History" to get similarity_score.
+5. Pick the single best variant using both scores.
+6. Call "Create Social Post" ONCE with that winning variant
+   so it is saved to Airtable and the idea is marked Processed.
 
 
 ### Writing Principles (must follow):
@@ -647,6 +739,7 @@ You MUST evaluate every variant before choosing, and you MUST use the 'Create So
         tools=[
             get_idea_details,
             get_brand_guidelines,
+            create_post_variants,
             evaluate_post_variant,
             compare_post_to_history,
             create_social_post,
