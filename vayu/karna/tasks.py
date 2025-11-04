@@ -113,8 +113,9 @@ def create_post_creation_task(agent, client_id: str, idea_ids: list):
    a. STEP A: Use 'Get Idea Details' tool to fetch the full idea
    
    b. STEP B: **Get an image (MANDATORY - DO NOT SKIP) using 'Get Post Image' tool:**
-      - Pass: idea summary, headline, brand_voice (from step 1), and source_url
-      - Tool will try to scrape from source first
+      - Pass: idea ID, idea summary, headline, brand_voice (from step 1), and source_url
+      - Tool will first check if an image exists in Image URL field, if yes use it
+       - Otherwise, try to scrape from source first
       - If no image found, will generate with DALL-E based on brand context
       - Save the returned image_url to use in posts
       
@@ -329,7 +330,7 @@ If you get 3 posts, you MUST make 3 calls.
         
         expected_output="""Publishing report with:
 
-1. **Total posts processed:** X
+1. **Total posts :** X
 
 2. **Successfully published:** (with Platform Post ID)
 
