@@ -459,12 +459,13 @@ def create_social_post(
 
 
 @tool("Get Post Image")
-def get_post_image(idea_summary: str, headline: str, brand_voice: str, source_url: str = "") -> str:
+def get_post_image(idea_id: str,idea_summary: str, headline: str, brand_voice: str, source_url: str = "") -> str:
     """
     Get an appropriate image for a social media post.
     Tries multiple methods: web scraping, stock images, or AI generation.
     
     Args:
+        idea_id: Idea ID
         idea_summary: The content summary
         headline: Post headline
         brand_voice: Client's brand description/industry
@@ -473,47 +474,118 @@ def get_post_image(idea_summary: str, headline: str, brand_voice: str, source_ur
     Returns:
         JSON with image URL
     """
+    
+    """
+    Get an appropriate image for a social media post.
+    First checks if idea already has an image, otherwise generates one.
+    """
     try:
+        # Check if idea already has image
+        idea = get_idea(idea_id)
+        existing_image = idea['fields'].get('Image URL', '')
+        
+        if existing_image:
+            print(f"[DEBUG] Using existing image from idea: {existing_image[:80]}...")
+            return json.dumps({
+                'success': True,
+                'image_url': existing_image,
+                'method': 'existing_from_idea',
+                'note': 'Image already provided with idea'
+            })
+
         from openai import OpenAI
         import os
+        import re
         import requests
         from bs4 import BeautifulSoup
         
         client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
-        # Method 1: Try to get image from source URL
+        # ================================================================
+        # Method 2: Try to get a *relevant* image from the article URL
+        # ================================================================
         if source_url and source_url.startswith('http'):
             try:
                 print(f"[DEBUG] Attempting to fetch image from source: {source_url}")
-                
+
                 headers = {'User-Agent': 'Mozilla/5.0'}
                 response = requests.get(source_url, headers=headers, timeout=10)
                 soup = BeautifulSoup(response.content, 'html.parser')
-                
-                # Try OpenGraph image first
-                og_image = soup.find('meta', property='og:image')
-                if og_image and og_image.get('content'):
-                    image_url = og_image['content']
-                    print(f"[DEBUG] Found OpenGraph image: {image_url[:80]}...")
+
+                # ----------------------------------------------------------
+                # 1️⃣  Try OG / Twitter images (only if not logo-like)
+                # ----------------------------------------------------------
+                def is_valid_image(url: str) -> bool:
+                    bad_terms = ["logo", "sprite", "icon", "favicon", "banner", "promo", "tracking"]
+                    return bool(url) and not any(b in url.lower() for b in bad_terms)
+
+                for meta_tag, label in [
+                    ("meta[property='og:image']", "og_image"),
+                    ("meta[name='twitter:image']", "twitter_image"),
+                ]:
+                    tag = soup.select_one(meta_tag)
+                    if tag and tag.get('content'):
+                        image_url = tag['content']
+                        if is_valid_image(image_url):
+                            print(f"[DEBUG] Found good {label}: {image_url[:80]}...")
+                            return json.dumps({
+                                'success': True,
+                                'image_url': image_url,
+                                'method': label,
+                                'note': 'Clean OG/Twitter image from article'
+                            })
+
+                # ----------------------------------------------------------
+                # 2️⃣  Fallback: scan inline <img> tags and score relevance
+                # ----------------------------------------------------------
+                def relevance_score(src: str, alt: str, text: str = "") -> float:
+                    """Simple heuristic relevance score."""
+                    if not src.startswith("http"):
+                        return -5
+                    src_l, alt_l, txt_l = src.lower(), alt.lower(), text.lower()
+
+                    # reject junk
+                    if any(bad in src_l for bad in ["logo", "icon", "sprite", "favicon", "ads", "promo", "tracking"]):
+                        return -5
+
+                    score = 0.0
+                    # reward descriptive alt
+                    if len(alt_l.split()) > 2:
+                        score += 1.0
+                    # reward resolution hints like 1200x800
+                    if re.search(r"\d{3,4}x\d{3,4}", src_l):
+                        score += 1.0
+                    # reward overlap with idea/headline keywords
+                    if idea_summary or headline:
+                        context = (idea_summary + " " + headline).lower()
+                        shared = len(set(context.split()) & set(alt_l.split()))
+                        shared2 = len(set(context.split()) & set(txt_l.split()))
+                        score += shared + 0.5 * shared2
+                    return score
+
+                candidates = []
+                for img in soup.find_all("img"):
+                    src = img.get("src") or img.get("data-src") or ""
+                    if not src.startswith("http"):
+                        continue
+                    alt = img.get("alt") or ""
+                    parent_text = img.find_parent().get_text(" ", strip=True)[:200] if img.find_parent() else ""
+                    sc = relevance_score(src, alt, parent_text)
+                    if sc >= 2:  # threshold for "relevant enough"
+                        candidates.append((sc, src, alt))
+
+                if candidates:
+                    candidates.sort(reverse=True, key=lambda x: x[0])
+                    best = candidates[0]
+                    print(f"[DEBUG] Selected article image: {best[1][:100]} (score={best[0]})")
                     return json.dumps({
                         'success': True,
-                        'image_url': image_url,
-                        'method': 'scraped_og_image',
-                        'note': 'Featured image from article'
+                        'image_url': best[1],
+                        'method': 'relevance_scored',
+                        'note': best[2][:100]
                     })
-                
-                # Try Twitter image
-                twitter_image = soup.find('meta', attrs={'name': 'twitter:image'})
-                if twitter_image and twitter_image.get('content'):
-                    image_url = twitter_image['content']
-                    print(f"[DEBUG] Found Twitter image: {image_url[:80]}...")
-                    return json.dumps({
-                        'success': True,
-                        'image_url': image_url,
-                        'method': 'scraped_twitter_image',
-                        'note': 'Featured image from article'
-                    })
-                
+
+                print("[DEBUG] No relevant image found in article.")
             except Exception as e:
                 print(f"[DEBUG] Scraping failed: {e}")
         
