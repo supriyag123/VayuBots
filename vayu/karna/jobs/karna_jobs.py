@@ -28,9 +28,9 @@ def full_workflow_one(client_id: str, num_ideas: int = 20, num_posts: int = 3, v
     """Run full workflow (curate → create posts → publish) for one client."""
     return karna_flow.full_workflow(client_id, num_ideas=num_ideas, num_posts=num_posts, verbose=verbose)
 
-def curate_all(max_clients: int = None, num_ideas: int = 20, verbose: bool = True):
+def curate_all(max_clients: int = None, verbose: bool = True):
     """Curate for all active clients."""
-    return karna_flow.curate_all_clients(max_clients=max_clients, num_ideas=num_ideas, verbose=verbose)
+    return karna_flow.curate_all_clients(max_clients=max_clients, verbose=verbose)
 
 def create_posts_all(max_clients: int = None, num_posts: int = 3, verbose: bool = True):
     """

@@ -103,7 +103,7 @@ class FullWorkflowRequest(BaseModel):
     num_posts: int = 3
 
 class CurateAllRequest(BaseModel):
-    num_ideas: int = 20
+    pass
 
 class FullWorkflowAllRequest(BaseModel):
     num_ideas: int = 20
@@ -217,7 +217,7 @@ def api_curate_all_async(req: CurateAllRequest, background: BackgroundTasks):
     def runner():
         update_job_status(job_id, "Running")
         try:
-            result = karna_jobs.curate_all(req.num_ideas)
+            result = karna_jobs.curate_all()
             update_job_status(job_id, "Completed", result_summary=result)
         except Exception as e:
             update_job_status(job_id, "Failed", error=e)
